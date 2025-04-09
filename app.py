@@ -63,7 +63,7 @@ def initialize_firebase():
                 st.error(f"Firebase initialization error: {str(e)}")
                 return False
         else:            
-            # Updated line:
+            # If environment variable not available, try with file path
             current_dir = os.path.dirname(os.path.abspath(__file__))
             service_account_path = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH", 
                                                  os.path.join(current_dir, "firebase-key.json"))
@@ -99,7 +99,6 @@ def initialize_firebase():
                     return False
     else:
         return True
-
 # Setup Google OAuth flow
 def create_google_oauth_flow():
     """Create a new OAuth flow instance"""
