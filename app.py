@@ -32,9 +32,14 @@ ACCENT_COLOR = "#e53935"
 LIGHT_COLOR = "#5a7d7c"
 
 # Google OAuth config
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:8501")
+# GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+# GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+# GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:8501")
+GOOGLE_CLIENT_ID = st.secrets["GOOGLE_CLIENT_ID"]
+GOOGLE_CLIENT_SECRET = st.secrets["GOOGLE_CLIENT_SECRET"]
+GOOGLE_PLACE_ID = st.secrets["GOOGLE_PLACE_ID"]
+GOOGLE_REDIRECT_URI = st.secrets["GOOGLE_REDIRECT_URI"]
+
 GOOGLE_SCOPES = [
     'openid',  # Add this scope to match what Google automatically includes
     'https://www.googleapis.com/auth/userinfo.email',
@@ -47,29 +52,13 @@ load_dotenv()
 # Initialize Firebase
 def initialize_firebase():
     if not firebase_admin._apps:
-        # Try initializing with individual environment variables
-        project_id = os.environ.get("FIREBASE_PROJECT_ID")
-        private_key = os.environ.get("FIREBASE_PRIVATE_KEY")
-        client_email = os.environ.get("FIREBASE_CLIENT_EMAIL")
-        client_id = os.environ.get("FIREBASE_CLIENT_ID")
-        
-        if project_id and private_key and client_email:
+        # Check if service account key exists
+        firebase_service_account = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
+        if firebase_service_account:
+            # Use service account from environment variable
             try:
-                # Make sure to replace literal "\n" with actual newlines in the private key
-                private_key = private_key.replace("\\n", "\n")
-                
-                cred = credentials.Certificate({
-                    "type": "service_account",
-                    "project_id": project_id,
-                    "private_key": private_key,
-                    "client_email": client_email,
-                    "client_id": client_id,
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                    "client_x509_cert_url": f"https://www.googleapis.com/robot/v1/metadata/x509/{urllib.parse.quote(client_email)}"
-                })
-                
+                service_account_info = json.loads(firebase_service_account)
+                cred = credentials.Certificate(service_account_info)
                 firebase_admin.initialize_app(cred, {
                     'storageBucket': os.environ.get("FIREBASE_STORAGE_BUCKET")
                 })
@@ -79,10 +68,10 @@ def initialize_firebase():
                 st.error(f"Firebase initialization error: {str(e)}")
                 return False
         else:            
-            # If environment variables not available, try with file path
+            # If environment variable not available, try with file path
             current_dir = os.path.dirname(os.path.abspath(__file__))
             service_account_path = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH", 
-                                               os.path.join(current_dir, "firebase-key.json"))
+                                                 os.path.join(current_dir, "firebase-key.json"))
             
             if os.path.exists(service_account_path):
                 try:
@@ -115,7 +104,38 @@ def initialize_firebase():
                     return False
     else:
         return True
-    # Setup Google OAuth flow
+
+def initialize_firebase():
+    if not firebase_admin._apps:
+        try:
+            # Use Streamlit secrets for credentials
+            firebase_credentials = {
+                "type": "service_account",
+                "project_id": st.secrets["FIREBASE_PROJECT_ID"],
+                "private_key": st.secrets["FIREBASE_PRIVATE_KEY"],
+                "client_email": st.secrets["FIREBASE_CLIENT_EMAIL"],
+                "client_id": st.secrets["FIREBASE_CLIENT_ID"],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "client_x509_cert_url": f"https://www.googleapis.com/robot/v1/metadata/x509/{urllib.parse.quote(st.secrets['FIREBASE_CLIENT_EMAIL'])}"
+            }
+            
+            cred = credentials.Certificate(firebase_credentials)
+            firebase_admin.initialize_app(cred, {
+                'storageBucket': st.secrets["FIREBASE_STORAGE_BUCKET"]
+            })
+            st.session_state.firebase_initialized = True
+            return True
+        except Exception as e:
+            st.error(f"Firebase initialization error: {str(e)}")
+            # Add more detailed error handling here if needed
+            import traceback
+            st.error(traceback.format_exc())
+            return False
+    else:
+        return True
+# Setup Google OAuth flow
 def create_google_oauth_flow():
     """Create a new OAuth flow instance"""
     client_config = {
@@ -1462,7 +1482,8 @@ def logout():
 
 # LLM functions (unchanged)
 def get_llm():
-    if not os.environ.get("OPENAI_API_KEY"):
+    OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+    if not OPENAI_API_KEY:
         st.error("OpenAI API key not found. Please set the OPENAI_API_KEY environment variable.")
         st.stop()
     
@@ -1609,7 +1630,7 @@ def process_audio_file(input_file_path):
 def transcribe_audio(audio_file_path):
     try:
         # Get API token from environment variable
-        LELAPA_API_TOKEN = os.environ.get("LELAPA_API_TOKEN")
+        LELAPA_API_TOKEN = st.secrets["LELAPA_API_TOKEN"]
         
         if not LELAPA_API_TOKEN:
             st.error("Lelapa API token not found. Please add it to your .env file.")
