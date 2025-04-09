@@ -3143,7 +3143,7 @@ def main():
             # Only show logo without the title on login page
             col1, col2 = st.columns([1, 5])
             with col1:
-                st.image(r"C:\Users\Michael\Downloads\Vintage Colorful Retro Vibes .png", width=80)  # Replace with your logo
+                st.image(r"Vintage Colorful Retro Vibes Typographic Product Brand Logo.png", width=80)  # Replace with your logo
             
             # User is not logged in, show enhanced login form with owner password
             render_enhanced_login_form()
