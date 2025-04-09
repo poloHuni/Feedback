@@ -16,4 +16,4 @@ altair==4.2.0
 uuid==1.30
 pathlib==1.0.1
 streamlit-javascript==0.1.5
-openai==1.63.2
+openai==0.28.1
