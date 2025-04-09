@@ -47,56 +47,41 @@ load_dotenv()
 # Initialize Firebase
 def initialize_firebase():
     if not firebase_admin._apps:
-        # Check if service account key exists
-        firebase_service_account = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
-        if firebase_service_account:
-            # Use service account from environment variable
-            try:
+        try:
+            # Get service account from environment variable
+            firebase_service_account = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
+            
+            if firebase_service_account:
+                # Parse JSON content
                 service_account_info = json.loads(firebase_service_account)
+                
+                # Make sure the private key has proper newlines
+                if "private_key" in service_account_info:
+                    service_account_info["private_key"] = service_account_info["private_key"].replace('\\n', '\n')
+                
+                # Initialize Firebase
                 cred = credentials.Certificate(service_account_info)
                 firebase_admin.initialize_app(cred, {
-                    'storageBucket': os.environ.get("FIREBASE_STORAGE_BUCKET")
+                    'storageBucket': os.environ.get("FIREBASE_STORAGE_BUCKET", "review-ai-storage")
                 })
                 st.session_state.firebase_initialized = True
                 return True
-            except Exception as e:
-                st.error(f"Firebase initialization error: {str(e)}")
-                return False
-        else:            
-            # If environment variable not available, try with file path
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            service_account_path = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH", 
-                                                 os.path.join(current_dir, "firebase-key.json"))
-            
-            if os.path.exists(service_account_path):
-                try:
-                    cred = credentials.Certificate(service_account_path)
+            else:
+                # Fallback to local file if it exists
+                if os.path.exists("firebase-key.json"):
+                    cred = credentials.Certificate("firebase-key.json")
                     firebase_admin.initialize_app(cred, {
-                        'storageBucket': os.environ.get("FIREBASE_STORAGE_BUCKET")
+                        'storageBucket': os.environ.get("FIREBASE_STORAGE_BUCKET", "review-ai-storage")
                     })
                     st.session_state.firebase_initialized = True
                     return True
-                except Exception as e:
-                    st.error(f"Firebase initialization error: {str(e)}")
-                    return False
-            else:
-                st.error(f"Firebase service account file not found at {service_account_path}")
-                # Try an absolute fallback path - place the file in the same directory as your script
-                fallback_path = "firebase-key.json"
-                if os.path.exists(fallback_path):
-                    try:
-                        cred = credentials.Certificate(fallback_path)
-                        firebase_admin.initialize_app(cred, {
-                            'storageBucket': os.environ.get("FIREBASE_STORAGE_BUCKET")
-                        })
-                        st.session_state.firebase_initialized = True
-                        return True
-                    except Exception as e:
-                        st.error(f"Firebase initialization error with fallback path: {str(e)}")
-                        return False
-                else:
-                    st.error(f"Firebase service account file not found at fallback path {fallback_path}")
-                    return False
+                    
+                st.error("Firebase credentials not found in environment variables or files")
+                return False
+                
+        except Exception as e:
+            st.error(f"Firebase initialization error: {str(e)}")
+            return False
     else:
         return True
 # Setup Google OAuth flow
