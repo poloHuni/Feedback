@@ -44,7 +44,7 @@ GOOGLE_SCOPES = [
     'openid',  # Add this scope to match what Google automatically includes
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
-    # 'https://www.googleapis.com/auth/business.manage'  # For Google Business Profile (Reviews)
+    'https://www.googleapis.com/auth/business.manage'  # For Google Business Profile (Reviews)
 ]
 
 load_dotenv()
